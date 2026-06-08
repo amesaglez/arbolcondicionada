@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Árbol de Probabilidad · Sesiones 3–4</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Lora:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b1120;
+    --surface: #111827;
+    --card: #1f2937;
+    --border: #374151;
+    --violet: #8b5cf6;
+    --yellow: #f59e0b;
+    --teal: #10b981;
+    --red: #ef4444;
+    --text: #f9fafb;
+    --muted: #9ca3af;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Lora', serif; min-height: 100vh; }
+
+  header { padding: 24px 36px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; }
+  header h1 { font-family: 'Syne', sans-serif; font-size: 1.35rem; font-weight: 800; }
+  .badge { font-family: 'DM Mono', monospace; font-size: .7rem; padding: 4px 12px; border-radius: 20px; background: rgba(139,92,246,.15); color: var(--violet); border: 1px solid rgba(139,92,246,.3); letter-spacing: .08em; text-transform: uppercase; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 36px; }
+  .tab { font-family: 'DM Mono', monospace; font-size: .8rem; padding: 13px 18px; cursor: pointer; border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .2s; }
+  .tab.active { color: var(--text); border-color: var(--violet); }
+  .tab:hover { color: var(--text); }
+
+  .panel { display: none; padding: 32px 36px; }
+  .panel.active { display: block; }
+
+  .row { display: flex; gap: 24px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 240px; }
+
+  .sec-title { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 16px; }
+
+  .btn { font-family: 'DM Mono', monospace; font-size: .82rem; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; transition: all .15s; }
+  .btn-v { background: var(--violet); color: white; }
+  .btn-v:hover { background: #7c3aed; }
+  .btn-sec { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .btn-sec:hover { background: var(--border); }
+
+  /* ── TABLE PANEL ── */
+  .data-table { width: 100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: .88rem; }
+  .data-table th { background: var(--card); border: 1px solid var(--border); padding: 10px 14px; font-weight: 500; color: var(--muted); }
+  .data-table td { border: 1px solid var(--border); padding: 10px 14px; }
+  .data-table td.val { color: var(--teal); font-weight: 500; }
+  .data-table td.total { background: rgba(139,92,246,.1); color: var(--violet); font-weight: 500; }
+
+  .cond-question { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 16px; }
+  .cond-q-text { font-size: 1rem; line-height: 1.65; margin-bottom: 14px; }
+  .cond-answer-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .cond-opt { font-family: 'DM Mono', monospace; font-size: .85rem; padding: 9px 18px; border-radius: 8px; cursor: pointer; background: var(--surface); border: 1px solid var(--border); color: var(--text); transition: all .2s; }
+  .cond-opt:hover { border-color: var(--violet); }
+  .cond-opt.correct { background: rgba(16,185,129,.15); border-color: var(--teal); color: var(--teal); }
+  .cond-opt.wrong { background: rgba(239,68,68,.1); border-color: var(--red); color: var(--red); }
+  .cond-fb { font-family: 'DM Mono', monospace; font-size: .82rem; padding: 10px 14px; border-radius: 8px; margin-top: 10px; display: none; }
+  .cond-fb.show { display: block; }
+  .cond-fb.ok { background: rgba(16,185,129,.1); color: var(--teal); border: 1px solid rgba(16,185,129,.3); }
+  .cond-fb.ko { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+
+  /* ── TREE PANEL ── */
+  .tree-config { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .tree-config label { font-family: 'DM Mono', monospace; font-size: .8rem; color: var(--muted); display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .07em; }
+  select, input[type=number] { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: .9rem; padding: 8px 12px; border-radius: 6px; width: 100%; margin-bottom: 14px; }
+  .toggle-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .toggle { position: relative; width: 44px; height: 24px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: var(--border); border-radius: 24px; cursor: pointer; transition: .2s; }
+  .slider::before { content:''; position: absolute; width: 18px; height: 18px; background: white; border-radius: 50%; left: 3px; top: 3px; transition: .2s; }
+  input:checked + .slider { background: var(--violet); }
+  input:checked + .slider::before { transform: translateX(20px); }
+  .toggle-label { font-family: 'DM Mono', monospace; font-size: .82rem; color: var(--muted); }
+
+  #tree-svg-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: auto; padding: 20px; }
+  #tree-svg { width: 100%; }
+
+  .node-circle { cursor: pointer; }
+  .node-circle:hover circle { stroke-width: 3; }
+
+  .leaf-prob { font-family: 'DM Mono', monospace; font-size: 11px; }
+  .edge-label { font-family: 'DM Mono', monospace; font-size: 11px; fill: #9ca3af; }
+  .node-label { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; }
+
+  /* ── PROB CONDICIONADA VISUAL ── */
+  .cond-visual { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .grid-cells { display: grid; gap: 4px; margin: 16px 0; }
+  .cell { width: 36px; height: 36px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: .75rem; cursor: pointer; transition: all .2s; border: 2px solid transparent; }
+  .cell.empty { background: var(--surface); color: var(--muted); }
+  .cell.good { background: rgba(16,185,129,.25); color: var(--teal); border-color: var(--teal); }
+  .cell.bad { background: rgba(239,68,68,.15); color: var(--red); border-color: rgba(239,68,68,.3); }
+  .cell.played { opacity: .3; }
+  .cell.highlighted { box-shadow: 0 0 0 3px var(--yellow); }
+
+  .stat-pill { display: inline-block; font-family: 'DM Mono', monospace; font-size: .85rem; padding: 6px 14px; border-radius: 20px; margin: 4px; }
+  .sp-v { background: rgba(139,92,246,.15); color: var(--violet); border: 1px solid rgba(139,92,246,.3); }
+  .sp-t { background: rgba(16,185,129,.15); color: var(--teal); border: 1px solid rgba(16,185,129,.3); }
+  .sp-y { background: rgba(245,158,11,.15); color: var(--yellow); border: 1px solid rgba(245,158,11,.3); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="badge">Sesiones 3 y 4</div>
+    <h1>Probabilidad condicionada y árbol de decisión</h1>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="sw('cond-visual')">🃏 El sobre misterioso</button>
+  <button class="tab" onclick="sw('tabla')">📊 Tablas de doble entrada</button>
+  <button class="tab" onclick="sw('arbol')">🌳 Constructor de árbol</button>
+</div>
+
+<!-- ══ PANEL: SOBRE MISTERIOSO ══ -->
+<div class="panel active" id="tab-cond-visual">
+  <div class="row">
+    <div class="col" style="max-width:380px">
+      <div class="sec-title">El mazo de cartas del juego</div>
+      <div class="cond-visual">
+        <p style="font-size:.9rem;color:var(--muted);margin-bottom:16px;line-height:1.6">
+          El mazo tiene <strong>20 cartas</strong>. Haz clic para "jugar" cartas y observa cómo cambia la probabilidad.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <span class="stat-pill sp-t" id="pill-good">🟢 Buenas: 8</span>
+          <span class="stat-pill" style="background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)" id="pill-bad">🔴 Malas: 12</span>
+          <span class="stat-pill sp-v" id="pill-total">Restantes: 20</span>
+        </div>
+        <div id="card-grid" class="grid-cells" style="grid-template-columns:repeat(5,36px)"></div>
+        <div style="margin-top:16px;display:flex;gap:10px">
+          <button class="btn btn-v" onclick="resetCards()">Reiniciar mazo</button>
+          <button class="btn btn-sec" onclick="autoPlay()">Jugar 5 →</button>
+        </div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div class="sec-title" style="font-size:.9rem;margin-bottom:12px">Probabilidad en tiempo real</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.85rem;line-height:2.2;color:var(--muted)">
+          <div>P(buena al inicio): <span id="p-inicial" style="color:var(--teal)">8/20 = 0.40</span></div>
+          <div>P(buena ahora): <span id="p-actual" style="color:var(--yellow);font-size:1rem">8/20 = 0.40</span></div>
+          <div id="cond-formula" style="margin-top:8px;font-size:.8rem;color:var(--violet)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="sec-title">Retos de probabilidad condicionada</div>
+      <div id="cond-q-container"></div>
+      <div style="margin-top:12px;display:flex;gap:10px" id="cond-nav" style="display:none">
+        <button class="btn btn-v" onclick="nextCondQ()" id="btn-cond-next" style="display:none">Siguiente →</button>
+        <button class="btn btn-sec" onclick="resetCondQ()">Reiniciar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANEL: TABLA ══ -->
+<div class="panel" id="tab-tabla">
+  <div class="sec-title">Tabla de doble entrada — cálculo de probabilidad condicionada</div>
+  <p style="color:var(--muted);font-size:.9rem;margin-bottom:24px;line-height:1.6">En un grupo de 80 estudiantes se recoge información sobre si practican música y si tienen dispositivo propio. Usa la tabla para responder las preguntas.</p>
+
+  <div class="row">
+    <div class="col" style="max-width:520px">
+      <table class="data-table">
+        <tr>
+          <th></th><th>Practica música (M)</th><th>No practica música (M')</th><th>Total</th>
+        </tr>
+        <tr>
+          <td style="font-weight:500">Con dispositivo (D)</td>
+          <td class="val">24</td><td class="val">16</td><td class="total">40</td>
+        </tr>
+        <tr>
+          <td style="font-weight:500">Sin dispositivo (D')</td>
+          <td class="val">16</td><td class="val">24</td><td class="total">40</td>
+        </tr>
+        <tr>
+          <td style="font-weight:500">Total</td>
+          <td class="total">40</td><td class="total">40</td><td class="total">80</td>
+        </tr>
+      </table>
+
+      <div style="margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Fórmulas de referencia</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.88rem;line-height:2.2;color:var(--muted)">
+          P(A) = nº favorables / total<br>
+          P(A|B) = P(A∩B) / P(B)<br>
+          P(A∩B) = nA∩B / total<br>
+          <span style="color:var(--violet)">Independencia: P(A|B) = P(A)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div id="tabla-q-container"></div>
+      <div style="margin-top:12px;display:flex;gap:10px">
+        <button class="btn btn-v" onclick="nextTablaQ()" id="btn-tabla-next" style="display:none">Siguiente →</button>
+        <button class="btn btn-sec" onclick="resetTablaQ()">Reiniciar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANEL: ÁRBOL ══ -->
+<div class="panel" id="tab-arbol">
+  <div class="row">
+    <div class="col" style="max-width:300px">
+      <div class="sec-title">Configuración del experimento</div>
+      <div class="tree-config">
+        <label>Tipo de experimento</label>
+        <select id="tree-type" onchange="buildTree()">
+          <option value="coin-dice">Moneda + Dado (d6)</option>
+          <option value="coin-dice4">Moneda + Dado (d4)</option>
+          <option value="bag">Bolsa: 3R + 2A (2 extracciones)</option>
+          <option value="bag2">Bolsa: 2R + 1V + 1A (2 extracciones)</option>
+        </select>
+        <div class="toggle-row">
+          <label class="toggle">
+            <input type="checkbox" id="toggle-repo" onchange="buildTree()">
+            <span class="slider"></span>
+          </label>
+          <span class="toggle-label">Sin reposición (cuando aplica)</span>
+        </div>
+        <label>Mostrar probabilidades</label>
+        <div class="toggle-row">
+          <label class="toggle">
+            <input type="checkbox" id="toggle-probs" checked onchange="buildTree()">
+            <span class="slider"></span>
+          </label>
+          <span class="toggle-label">Mostrar probabilidades en ramas</span>
+        </div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px">
+        <div class="sec-title" style="font-size:.9rem;margin-bottom:12px">Resultados</div>
+        <div id="tree-stats" style="font-family:'DM Mono',monospace;font-size:.82rem;line-height:2;color:var(--muted)">—</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="sec-title">Diagrama en árbol</div>
+      <div id="tree-svg-wrap">
+        <svg id="tree-svg" viewBox="0 0 700 400" style="width:100%;height:auto"></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════
+// PANEL 1: SOBRE MISTERIOSO
+// ══════════════════════════════
+let cards = [];
+let condIdx = 0, condAnswered = false, condOk = 0, condKo = 0;
+
+const condQuestions = [
+  {
+    setup: () => `Situación actual: quedan <strong>${cards.filter(c=>!c.played).length}</strong> cartas (${cards.filter(c=>!c.played&&c.good).length} buenas, ${cards.filter(c=>!c.played&&!c.good).length} malas).`,
+    text: () => `¿Cuál es la probabilidad de que la siguiente carta sea buena?`,
+    getOpts: () => {
+      const rem = cards.filter(c=>!c.played).length;
+      const good = cards.filter(c=>!c.played&&c.good).length;
+      const p = good/rem;
+      const wrong1 = 8/20, wrong2 = good/(rem+2), wrong3 = (good+1)/rem;
+      return [
+        { label: `${good}/${rem} = ${p.toFixed(2)}`, correct: true, exp: `Quedan ${good} buenas de ${rem} cartas. P = ${good}/${rem} ≈ ${p.toFixed(2)}.` },
+        { label: `8/20 = 0.40`, correct: false, exp: `Eso era la probabilidad inicial. Ahora el espacio muestral ha cambiado.` },
+        { label: `${good}/${rem+2} = ${(good/(rem+2)).toFixed(2)}`, correct: false, exp: `El denominador debe ser el total de cartas que quedan, no más.` },
+      ].sort(() => Math.random()-.5);
+    },
+  }
+];
+
+function initCards() {
+  cards = [];
+  for (let i = 0; i < 8; i++) cards.push({ id: i, good: true, played: false });
+  for (let i = 0; i < 12; i++) cards.push({ id: i+8, good: false, played: false });
+  cards.sort(() => Math.random()-.5);
+  renderCards();
+}
+
+function renderCards() {
+  const grid = document.getElementById('card-grid');
+  grid.innerHTML = cards.map((c,i) => `
+    <div class="cell ${c.played?'played':c.good?'good':'bad'}" onclick="playCard(${i})" title="${c.played?'Jugada':'Haz clic para jugar'}">
+      ${c.played ? '✓' : c.good ? '🟢' : '🔴'}
+    </div>`).join('');
+  const rem = cards.filter(c=>!c.played);
+  const good = rem.filter(c=>c.good).length;
+  const bad = rem.filter(c=>!c.good).length;
+  document.getElementById('pill-good').textContent = `🟢 Buenas: ${good}`;
+  document.getElementById('pill-bad').textContent = `🔴 Malas: ${bad}`;
+  document.getElementById('pill-total').textContent = `Restantes: ${rem.length}`;
+  document.getElementById('p-actual').textContent = rem.length > 0 ? `${good}/${rem.length} = ${(good/rem.length).toFixed(2)}` : '—';
+  const initGood = cards.filter(c=>c.good).length;
+  document.getElementById('p-inicial').textContent = `${initGood}/20 = ${(initGood/20).toFixed(2)}`;
+  const played = cards.filter(c=>c.played).length;
+  if (played > 0) {
+    document.getElementById('cond-formula').textContent = `Sabiendo que se han jugado ${played} cartas → P cambia`;
+  }
+}
+
+function playCard(i) {
+  if (!cards[i].played) { cards[i].played = true; renderCards(); }
+}
+
+function autoPlay() {
+  const notPlayed = cards.map((c,i)=>({c,i})).filter(x=>!x.c.played);
+  const toPlay = notPlayed.sort(()=>Math.random()-.5).slice(0,5);
+  toPlay.forEach(x => { cards[x.i].played = true; });
+  renderCards();
+}
+
+function resetCards() { initCards(); }
+initCards();
+
+// Cond questions
+const condQs = [
+  { text:"Se sabe que un alumno tiene dispositivo propio. En ese grupo (D), ¿cuántos practican música?", opts:["24","16","40","30"], correct:0, exp:"De los 40 con dispositivo, 24 practican música. P(M|D) = 24/40 = 0.60." },
+  { text:"P(M|D) — probabilidad de practicar música dado que tiene dispositivo:", opts:["24/40 = 0.60","24/80 = 0.30","40/80 = 0.50","16/40 = 0.40"], correct:0, exp:"P(M|D) = P(M∩D)/P(D) = (24/80)/(40/80) = 24/40 = 0.60." },
+  { text:"P(M|D') — probabilidad de practicar música dado que NO tiene dispositivo:", opts:["16/40 = 0.40","24/40 = 0.60","16/80 = 0.20","40/80 = 0.50"], correct:0, exp:"De los 40 sin dispositivo, 16 practican música: P(M|D') = 16/40 = 0.40." },
+  { text:"¿Son M y D independientes?", opts:["No, porque P(M|D) ≠ P(M)","Sí, porque ambos tienen 40 casos","Sí, porque P(M∩D) = P(M)·P(D)","No hay suficiente información"], correct:0, exp:"P(M) = 40/80 = 0.5. P(M|D) = 0.60 ≠ 0.5. Como difieren, M y D NO son independientes." },
+  { text:"Calcula P(M ∩ D) directamente de la tabla:", opts:["24/80 = 0.30","24/40 = 0.60","40/80 = 0.50","16/80 = 0.20"], correct:0, exp:"La celda M∩D tiene 24 alumnos de 80 totales → P = 24/80 = 0.30." },
+];
+
+let tablaIdx = 0, tablaAnswered = false;
+
+function renderTablaQ() {
+  if (tablaIdx >= condQs.length) {
+    document.getElementById('tabla-q-container').innerHTML = '<div style="padding:24px;text-align:center;font-family:Syne,sans-serif;font-size:1.3rem">¡Completado! 🎉</div>';
+    return;
+  }
+  const q = condQs[tablaIdx];
+  const opts = q.opts.map((o,i) => `<div class="cond-opt" onclick="checkTablaQ(${i})" id="topt-${i}">${o}</div>`).join('');
+  document.getElementById('tabla-q-container').innerHTML = `
+    <div class="cond-question">
+      <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);margin-bottom:10px">Pregunta ${tablaIdx+1} de ${condQs.length}</div>
+      <div class="cond-q-text">${q.text}</div>
+      <div class="cond-answer-row">${opts}</div>
+      <div class="cond-fb" id="tfb"></div>
+    </div>`;
+  document.getElementById('btn-tabla-next').style.display = 'none';
+  tablaAnswered = false;
+}
+
+function checkTablaQ(i) {
+  if (tablaAnswered) return;
+  tablaAnswered = true;
+  const q = condQs[tablaIdx];
+  const fb = document.getElementById('tfb');
+  if (i === q.correct) {
+    document.getElementById('topt-'+i).classList.add('correct');
+    fb.className = 'cond-fb show ok'; fb.textContent = '✓ ' + q.exp;
+  } else {
+    document.getElementById('topt-'+i).classList.add('wrong');
+    document.getElementById('topt-'+q.correct).classList.add('correct');
+    fb.className = 'cond-fb show ko'; fb.textContent = '✗ ' + q.exp;
+  }
+  document.getElementById('btn-tabla-next').style.display = 'inline-block';
+}
+function nextTablaQ() { tablaIdx++; renderTablaQ(); }
+function resetTablaQ() { tablaIdx = 0; tablaAnswered = false; renderTablaQ(); }
+renderTablaQ();
+
+// Cond sobre misterioso
+let csIdx = 0, csAnswered = false;
+const csQs = [
+  { text:"Al inicio del juego (20 cartas: 8 buenas, 12 malas), ¿cuál es P(buena)?", opts:["8/20 = 0.40","12/20 = 0.60","1/2","8/12"], correct:0, exp:"Al inicio: P(buena) = 8/20 = 0.40. Todos los casos son igualmente posibles." },
+  { text:"Se juegan 3 cartas malas y 1 buena (4 jugadas). ¿Cuántas cartas quedan? ¿Cuántas son buenas?", opts:["16 restantes, 7 buenas","16 restantes, 8 buenas","17 restantes, 7 buenas","18 restantes, 6 buenas"], correct:0, exp:"20 - 4 = 16 cartas. Buenas: 8 - 1 = 7. P(buena ahora) = 7/16 ≈ 0.44." },
+  { text:"Si van 4 cartas malas y 0 buenas (4 jugadas), ¿cuál es P(buena ahora)?", opts:["8/16 = 0.50","8/20 = 0.40","7/16","12/16"], correct:0, exp:"16 cartas restantes, las 8 buenas siguen todas. P = 8/16 = 0.50. ¡Mayor que al inicio!" },
+  { text:"¿Por qué cambia la probabilidad al jugar cartas sin reposición?", opts:["Porque el espacio muestral cambia","Porque la suerte cambia","Porque las cartas se mezclan","No cambia, sigue siendo 8/20"], correct:0, exp:"Cada carta jugada cambia el espacio muestral. La probabilidad condicionada refleja exactamente eso." },
+];
+
+function renderCondQ() {
+  if (csIdx >= csQs.length) {
+    document.getElementById('cond-q-container').innerHTML = '<div style="padding:24px;text-align:center;font-family:Syne,sans-serif;font-size:1.3rem">¡Completado! 🎉</div>';
+    return;
+  }
+  const q = csQs[csIdx];
+  const opts = q.opts.map((o,i) => `<div class="cond-opt" onclick="checkCondQ(${i})" id="csopt-${i}">${o}</div>`).join('');
+  document.getElementById('cond-q-container').innerHTML = `
+    <div class="cond-question">
+      <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);margin-bottom:10px">Pregunta ${csIdx+1} de ${csQs.length}</div>
+      <div class="cond-q-text">${q.text}</div>
+      <div class="cond-answer-row">${opts}</div>
+      <div class="cond-fb" id="csfb"></div>
+    </div>`;
+  document.getElementById('btn-cond-next').style.display = 'none';
+  csAnswered = false;
+}
+
+function checkCondQ(i) {
+  if (csAnswered) return;
+  csAnswered = true;
+  const q = csQs[csIdx];
+  const fb = document.getElementById('csfb');
+  if (i === q.correct) {
+    document.getElementById('csopt-'+i).classList.add('correct');
+    fb.className = 'cond-fb show ok'; fb.textContent = '✓ ' + q.exp;
+  } else {
+    document.getElementById('csopt-'+i).classList.add('wrong');
+    document.getElementById('csopt-'+q.correct).classList.add('correct');
+    fb.className = 'cond-fb show ko'; fb.textContent = '✗ ' + q.exp;
+  }
+  document.getElementById('btn-cond-next').style.display = 'inline-block';
+  document.getElementById('cond-nav').style.display = 'flex';
+}
+function nextCondQ() { csIdx++; renderCondQ(); }
+function resetCondQ() { csIdx = 0; csAnswered = false; renderCondQ(); }
+renderCondQ();
+
+// ══════════════════════════════
+// PANEL 3: ÁRBOL
+// ══════════════════════════════
+function gcd(a,b) { return b ? gcd(b, a%b) : a; }
+function frac(n,d) { const g = gcd(Math.abs(n),Math.abs(d)); return `${n/g}/${d/g}`; }
+
+function buildTree() {
+  const type = document.getElementById('tree-type').value;
+  const noRepo = document.getElementById('toggle-repo').checked;
+  const showProbs = document.getElementById('toggle-probs').checked;
+  const svg = document.getElementById('tree-svg');
+
+  let nodes = [];
+  let edges = [];
+
+  if (type === 'coin-dice' || type === 'coin-dice4') {
+    const faces = type === 'coin-dice' ? 6 : 4;
+    const branches1 = [{label:'Cara', p:1/2}, {label:'Cruz', p:1/2}];
+    const branches2 = Array.from({length:faces},(_,i)=>({label:''+(i+1), p:1/faces}));
+    nodes.push({id:'root', x:60, y:200, label:'', root:true});
+    branches1.forEach((b1,j) => {
+      const y1 = 60 + j*280;
+      const id1 = `n1_${j}`;
+      nodes.push({id:id1, x:220, y:y1, label:b1.label, color:j===0?'#10b981':'#f97316'});
+      edges.push({from:'root', to:id1, label:showProbs?frac(1,2):'', color:j===0?'#10b981':'#f97316'});
+      branches2.forEach((b2,k) => {
+        const y2 = y1 - ((faces-1)/2)*40 + k*40;
+        const id2 = `n2_${j}_${k}`;
+        const pLeaf = b1.p * b2.p;
+        nodes.push({id:id2, x:420, y:y2, label:b2.label, leaf:true, prob:frac(1,2*faces), color:j===0?'#10b981':'#f97316'});
+        edges.push({from:id1, to:id2, label:showProbs?frac(1,faces):'', color:'#6b7280'});
+      });
+    });
+  } else {
+    const bags = {
+      'bag': [{c:'R',n:3,color:'#ef4444'},{c:'A',n:2,color:'#3b82f6'}],
+      'bag2': [{c:'R',n:2,color:'#ef4444'},{c:'V',n:1,color:'#10b981'},{c:'A',n:1,color:'#3b82f6'}]
+    };
+    const bag = bags[type];
+    const total = bag.reduce((s,b)=>s+b.n, 0);
+    nodes.push({id:'root', x:60, y:(bag.length===2?200:240), label:'', root:true});
+    let yOff = 0;
+    const leafH = noRepo ? 50 : 50;
+    bag.forEach((b1,j) => {
+      const y1 = 60 + j*((bag.length===2?280:220));
+      const id1 = `n1_${j}`;
+      nodes.push({id:id1, x:220, y:y1, label:b1.c, color:b1.color});
+      edges.push({from:'root', to:id1, label:showProbs?frac(b1.n,total):'', color:b1.color});
+      let bag2 = noRepo
+        ? bag.map(b => b.c===b1.c ? {...b,n:b.n-1} : {...b}).filter(b=>b.n>0)
+        : bag;
+      const total2 = noRepo ? total-1 : total;
+      const nLeafs = bag2.length;
+      bag2.forEach((b2,k) => {
+        const y2 = y1 - ((nLeafs-1)/2)*leafH + k*leafH;
+        const id2 = `n2_${j}_${k}`;
+        const pLeaf = (b1.n/total) * (b2.n/total2);
+        nodes.push({id:id2, x:420, y:y2, label:b1.c+b2.c, leaf:true,
+          prob: showProbs ? `${frac(b1.n,total)}×${frac(b2.n,total2)}` : '', color:b2.color});
+        edges.push({from:id1, to:id2, label:showProbs?frac(b2.n,total2):'', color:'#6b7280'});
+      });
+    });
+  }
+
+  // Calculate SVG bounds
+  const maxX = Math.max(...nodes.map(n=>n.x)) + 140;
+  const maxY = Math.max(...nodes.map(n=>n.y)) + 40;
+  const minY = Math.min(...nodes.map(n=>n.y)) - 40;
+  const height = maxY - minY + 60;
+  const shiftY = -minY + 30;
+
+  svg.setAttribute('viewBox', `0 ${minY-30} ${maxX} ${height}`);
+
+  const nodeMap = {};
+  nodes.forEach(n => nodeMap[n.id] = n);
+
+  let svgContent = '';
+  // Edges
+  edges.forEach(e => {
+    const f = nodeMap[e.from], t = nodeMap[e.to];
+    svgContent += `<line x1="${f.x}" y1="${f.y}" x2="${t.x}" y2="${t.y}" stroke="${e.color}" stroke-width="1.5" opacity="0.6"/>`;
+    const mx = (f.x+t.x)/2, my = (f.y+t.y)/2;
+    if (e.label) svgContent += `<text x="${mx}" y="${my-5}" text-anchor="middle" class="edge-label" fill="#9ca3af" font-size="10" font-family="DM Mono">${e.label}</text>`;
+  });
+  // Nodes
+  nodes.forEach(n => {
+    if (n.root) {
+      svgContent += `<circle cx="${n.x}" cy="${n.y}" r="16" fill="#1f2937" stroke="#8b5cf6" stroke-width="2"/>`;
+      svgContent += `<text x="${n.x}" y="${n.y+4}" text-anchor="middle" font-size="13" fill="#f9fafb" font-family="DM Mono">?</text>`;
+    } else if (n.leaf) {
+      svgContent += `<rect x="${n.x}" y="${n.y-14}" width="100" height="28" rx="6" fill="rgba(31,41,55,.9)" stroke="${n.color}" stroke-width="1.5"/>`;
+      svgContent += `<text x="${n.x+50}" y="${n.y-2}" text-anchor="middle" font-size="11" fill="${n.color}" font-family="DM Mono">${n.label}</text>`;
+      if (n.prob) svgContent += `<text x="${n.x+50}" y="${n.y+11}" text-anchor="middle" font-size="9" fill="#9ca3af" font-family="DM Mono">${n.prob}</text>`;
+    } else {
+      svgContent += `<circle cx="${n.x}" cy="${n.y}" r="20" fill="#1f2937" stroke="${n.color}" stroke-width="2"/>`;
+      svgContent += `<text x="${n.x}" y="${n.y+5}" text-anchor="middle" font-size="13" fill="${n.color}" font-family="DM Mono" font-weight="500">${n.label}</text>`;
+    }
+  });
+
+  svg.innerHTML = svgContent;
+
+  // Stats
+  const leaves = nodes.filter(n=>n.leaf);
+  document.getElementById('tree-stats').innerHTML = `
+    Nodos: ${nodes.length}<br>
+    Hojas (resultados): ${leaves.length}<br>
+    Con reposición: ${!noRepo ? 'Sí' : 'No'}<br>
+    Experimentos: 2 etapas
+  `;
+}
+buildTree();
+
+// ══════════════
+function sw(name) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
